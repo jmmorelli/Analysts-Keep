@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>The Analyst's Keep</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#040608;color:#c8f0d0;font-family:'Rajdhani',sans-serif;overflow:hidden}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.04) 3px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:9999}
+
+/* ── TOP BAR ── */
+#topbar{height:38px;background:#040c08;border-bottom:1px solid #0a3020;display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0}
+#topbar::after{content:'';position:absolute;top:38px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#00ff8866,#00ccff66,#00ff8866,transparent);pointer-events:none}
+.tb-badge{font-family:'Share Tech Mono',monospace;font-size:11px;color:#22cc88;background:#050f0a;border:1px solid #0a3020;padding:3px 10px;border-radius:2px;white-space:nowrap}
+.tb-badge b{color:#00ff88}
+.tb-title{font-family:'Cinzel',serif;font-size:16px;font-weight:700;color:#00ff88;letter-spacing:.12em;text-shadow:0 0 14px #00ff8888;white-space:nowrap}
+.tb-sep{width:1px;height:20px;background:#0a3020}
+#tb-clock{font-family:'Share Tech Mono',monospace;font-size:11px;color:#1a5030;margin-left:auto;white-space:nowrap}
+
+/* ── OUTER SHELL ── */
+#shell{display:flex;height:calc(100vh - 38px);min-height:0}
+
+/* ── LEFT: FACTORY ── */
+#factory{flex:1;display:grid;grid-template-columns:1fr 200px 1fr;grid-template-rows:1fr 1fr;gap:10px;padding:10px;min-width:0;position:relative}
+
+/* ── ROOMS ── */
+.room{border:1px solid #0a2a18;border-radius:3px;background:#050d08;display:flex;flex-direction:column;position:relative;overflow:hidden;cursor:pointer;transition:border-color .2s,box-shadow .2s;min-height:0}
+.room::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,255,136,.04),transparent 65%);pointer-events:none;z-index:0}
+.room:hover{border-color:#00884433}
+.room.working{border-color:#00ff88 !important;box-shadow:0 0 22px #00ff8833,inset 0 0 25px #00ff8808;animation:rpulse 2s infinite}
+.room.done{border-color:#00ccff88;box-shadow:0 0 14px #00ccff22}
+.room.alertst{border-color:#ff444488;box-shadow:0 0 14px #ff444422}
+@keyframes rpulse{0%,100%{box-shadow:0 0 18px #00ff8830,inset 0 0 20px #00ff8806}50%{box-shadow:0 0 32px #00ff8855,inset 0 0 36px #00ff8812}}
+
+.rc{position:absolute;width:7px;height:7px;border-color:#00ff8855;border-style:solid;z-index:2}
+.rc.tl{top:4px;left:4px;border-width:1px 0 0 1px}
+.rc.tr{top:4px;right:4px;border-width:1px 1px 0 0}
+.rc.bl{bottom:4px;left:4px;border-width:0 0 1px 1px}
+.rc.br{bottom:4px;right:4px;border-width:0 1px 1px 0}
+
+.room-hdr{display:flex;align-items:center;gap:7px;padding:8px 10px 6px;border-bottom:1px solid #0a2218;position:relative;z-index:1;flex-shrink:0}
+.ricon{font-size:15px}
+.rname{font-family:'Cinzel',serif;font-size:10px;font-weight:700;color:#33bb66;letter-spacing:.07em;text-shadow:0 0 8px #33bb6644;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtag{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;flex-shrink:0}
+.tag-idle{background:#040d08;color:#1a4428;border:1px solid #0a2218}
+.tag-work{background:#0a2a18;color:#00ff88;border:1px solid #00cc66;animation:blink 1s infinite}
+.tag-done{background:#040d14;color:#00ccff;border:1px solid #006688}
+.tag-err {background:#140404;color:#ff4444;border:1px solid #661111}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+
+.room-body{padding:8px 10px;position:relative;z-index:1;flex:1;display:flex;flex-direction:column;gap:6px;min-height:0}
+.agent-row{display:flex;align-items:center;gap:7px}
+.pip{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:all .3s}
+.aname{font-family:'Share Tech Mono',monospace;font-size:11px}
+.atask{font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a4028;margin-top:1px}
+.atask.on{color:#00aa55}
+
+.vizbox{height:32px;background:#030806;border:1px solid #081e10;border-radius:2px;position:relative;overflow:hidden;flex-shrink:0}
+.vizbox .scanline{position:absolute;top:50%;left:-100%;width:100%;height:1px;background:linear-gradient(90deg,transparent,#00ff8844,transparent);animation:scan 2.5s linear infinite}
+@keyframes scan{to{left:200%}}
+.vbar{position:absolute;bottom:0;width:5px;border-radius:1px 1px 0 0;transition:height .4s}
+
+/* ── WAR ROOM CENTER ── */
+#warroom{grid-column:2;grid-row:1/3;background:#040e08;border:1px solid #00ff8833;border-radius:3px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+#warroom::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 35%,rgba(0,255,136,.07),transparent 60%);pointer-events:none}
+.wr-top{padding:10px 10px 6px;border-bottom:1px solid #0a2a18;flex-shrink:0;text-align:center}
+.wr-title{font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:#00ff88;letter-spacing:.12em;text-shadow:0 0 12px #00ff88}
+
+/* core orb */
+.wr-orb{display:flex;align-items:center;justify-content:center;padding:10px 0;flex-shrink:0;position:relative}
+.ring{position:absolute;border-radius:50%;border:1px solid;animation:spin linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.orb-dot{width:14px;height:14px;border-radius:50%;background:#00ff88;box-shadow:0 0 12px #00ff88,0 0 24px #00ff8866;transition:all .3s}
+
+/* command section */
+.wr-cmd{padding:8px 10px;flex-shrink:0}
+.cmd-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a5030;margin-bottom:5px;letter-spacing:.08em}
+.cmd-row{display:flex;align-items:center;gap:5px;background:#030806;border:1px solid #0a3020;border-radius:2px;padding:5px 8px;margin-bottom:7px}
+.cmd-prompt{color:#00ff88;font-family:'Share Tech Mono',monospace;font-size:13px;flex-shrink:0}
+#cmd{flex:1;background:transparent;border:none;outline:none;font-family:'Share Tech Mono',monospace;font-size:11px;color:#00ff88;caret-color:#00ff88;min-width:0}
+#cmd::placeholder{color:#1a3820}
+.upload-lbl{font-family:'Share Tech Mono',monospace;font-size:9px;background:#040e08;border:1px solid #0a2a18;color:#1a6030;padding:4px 8px;border-radius:2px;cursor:pointer;display:block;text-align:center;transition:all .2s;margin-bottom:6px}
+.upload-lbl:hover{border-color:#00884433;color:#00cc66}
+.agent-btns{display:flex;flex-direction:column;gap:5px}
+.abtn{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;background:#040d08;border:1px solid #0a2a18;border-radius:2px;padding:6px 8px;cursor:pointer;transition:all .15s;text-align:left;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.abtn:hover{background:#081a10}
+.abtn:disabled{opacity:.3;cursor:not-allowed}
+.abtn.deploy-all{border-color:#00ff8866;color:#00ff88;background:#061208;font-weight:700;justify-content:center;font-size:12px}
+.abtn.deploy-all:hover{background:#0a1e10;box-shadow:0 0 12px #00ff8833}
+
+/* stats */
+.wr-stats{padding:8px 10px;border-top:1px solid #0a2218;flex-shrink:0;margin-top:auto}
+.wst{font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a4028;display:flex;justify-content:space-between;margin-bottom:3px}
+.wst b{color:#00aa55}
+
+/* ── RIGHT SIDEBAR ── */
+#sidebar{width:260px;background:#040c08;border-left:1px solid #0a2a18;display:flex;flex-direction:column;flex-shrink:0;min-height:0}
+.sb-hdr{padding:8px 12px;border-bottom:1px solid #0a2218;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sb-title{font-family:'Cinzel',serif;font-size:11px;color:#00ff88;letter-spacing:.1em;text-shadow:0 0 8px #00ff8866}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#00ff88;box-shadow:0 0 5px #00ff88;animation:blink 1.4s infinite;margin-left:auto}
+
+.sb-tabs{display:flex;border-bottom:1px solid #0a2218;flex-shrink:0}
+.stab{flex:1;padding:5px 2px;font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a4028;text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.stab.on{color:#00ff88;border-bottom-color:#00ff88;background:#051208}
+.stab:hover{color:#44cc88}
+
+#logarea{flex:1;overflow-y:auto;padding:5px 8px;min-height:0}
+#logarea::-webkit-scrollbar{width:3px}
+#logarea::-webkit-scrollbar-thumb{background:#0a2a18;border-radius:2px}
+
+.lentry{display:flex;gap:6px;padding:4px 3px;border-bottom:1px solid #060d08;animation:fadeIn .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateX(6px)}to{opacity:1}}
+.ltime{font-family:'Share Tech Mono',monospace;font-size:9px;color:#1a3020;flex-shrink:0;padding-top:1px}
+.licon{flex-shrink:0;font-size:10px;width:14px;text-align:center}
+.ltxt{font-family:'Share Tech Mono',monospace;font-size:10px;line-height:1.5;flex:1;word-break:break-word}
+.ltxt.info{color:#1a5030}
+.ltxt.done{color:#00aa55}
+.ltxt.warn{color:#aaaa00}
+.ltxt.alert{color:#ff4444}
+.ltxt.stream{color:#2a6a3a}
+
+/* report pane inside sidebar */
+#rptpane{border-top:2px solid #0a2a18;display:none;flex-direction:column;max-height:45%;flex-shrink:0}
+#rptpane.show{display:flex}
+.rpt-hdr{padding:6px 10px;background:#050f08;border-bottom:1px solid #0a2218;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.rpt-aname{font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:.06em}
+.rpt-tabs{display:flex;gap:3px;margin-left:auto}
+.rtab{font-size:11px;padding:2px 5px;border:1px solid #0a2218;border-radius:2px;cursor:pointer;background:#040c08;transition:all .15s}
+.rtab.on{border-color:#00aa55;color:#00ff88}
+.rpt-body{padding:8px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#3a8050;line-height:1.7;white-space:pre-wrap;overflow-y:auto;flex:1}
+.rpt-body::-webkit-scrollbar{width:3px}
+.rpt-body::-webkit-scrollbar-thumb{background:#0a2a18}
+
+/* conn lines */
+#connsvg{position:absolute;inset:0;pointer-events:none;z-index:0}
+
+/* agent sprites */
+.sprite{position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:9px;pointer-events:none;z-index:5;transition:left 1.8s ease,top 1.8s ease}
+.sprite.working{animation:spulse .9s infinite}
+@keyframes spulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+
+.gridbg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,255,100,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,100,.025) 1px,transparent 1px);background-size:28px 28px;animation:gmove 10s linear infinite;z-index:0}
+@keyframes gmove{0%{background-position:0 0}100%{background-position:0 28px}}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar" style="position:relative">
+  <div style="width:7px;height:7px;border-radius:50%;background:#00ff88;box-shadow:0 0 7px #00ff88;animation:blink 1.8s infinite;flex-shrink:0"></div>
+  <div class="tb-title">⚔ THE ANALYST'S KEEP</div>
+  <div class="tb-sep"></div>
+  <div class="tb-badge">AGENTS <b id="tb-agents">4 ONLINE</b></div>
+  <div class="tb-badge">ANALYSES <b id="tb-count">0</b></div>
+  <div class="tb-badge">STATUS <b id="tb-status">STANDBY</b></div>
+  <div id="tb-clock" style="margin-left:auto"></div>
+  <div class="tb-sep"></div>
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#0a3820;white-space:nowrap">OREGON // MICHAEL'S KEEP</div>
+</div>
+
+<div id="shell">
+
+  <!-- FACTORY -->
+  <div id="factory">
+    <div class="gridbg"></div>
+    <svg id="connsvg"></svg>
+
+    <!-- sprites -->
+    <div class="sprite" id="sp-balance" style="border-color:#4a9adf;background:#071018;color:#4a9adf;left:14%;top:20%">⚔</div>
+    <div class="sprite" id="sp-cashflow" style="border-color:#2dd4a4;background:#07120f;color:#2dd4a4;left:66%;top:20%">💧</div>
+    <div class="sprite" id="sp-proxy" style="border-color:#d4a432;background:#120e04;color:#d4a432;left:14%;top:68%">⚖</div>
+    <div class="sprite" id="sp-risk" style="border-color:#e85555;background:#120707;color:#e85555;left:66%;top:68%">🔭</div>
+
+    <!-- BALANCE SHEET TOWER -->
+    <div class="room" id="room-balance" onclick="clickRoom('balance')" style="grid-column:1;grid-row:1">
+      <div class="rc tl"></div><div class="rc tr"></div><div class="rc bl"></div><div class="rc br"></div>
+      <div class="room-hdr">
+        <span class="ricon" style="color:#4a9adf">🏛</span>
+        <span class="rname">BALANCE SHEET TOWER</span>
+        <span class="rtag tag-idle" id="tag-balance">IDLE</span>
+      </div>
+      <div class="room-body">
+        <div class="agent-row">
+          <div class="pip" id="pip-balance" style="background:#1a2a3a"></div>
+          <div><div class="aname" style="color:#4a9adf">Sir Ledger</div><div class="atask" id="task-balance">Awaiting orders</div></div>
+        </div>
+        <div class="vizbox" id="viz-balance"><div class="scanline"></div></div>
+      </div>
+    </div>
+
+    <!-- WAR ROOM -->
+    <div id="warroom" style="grid-column:2;grid-row:1/3">
+      <div class="wr-top"><div class="wr-title">⚔ WAR ROOM ⚔</div></div>
+      <div class="wr-orb">
+        <div class="ring" style="width:64px;height:64px;border-color:#00ff8818;animation-duration:9s"></div>
+        <div class="ring" style="width:44px;height:44px;border-color:#00ff8833;animation-duration:5s;animation-direction:reverse"></div>
+        <div class="orb-dot" id="orb"></div>
+      </div>
+      <div class="wr-cmd">
+        <div class="cmd-label">TARGET ACQUISITION</div>
+        <div class="cmd-row">
+          <span class="cmd-prompt">›</span>
+          <input id="cmd" placeholder="Ticker or describe…" autocomplete="off" onkeydown="if(event.key==='Enter')deployAll()"/>
+        </div>
+        <label class="upload-lbl" for="pdfinput">📎 <span id="pdflbl">Upload PDF Statement</span></label>
+        <input type="file" id="pdfinput" accept=".pdf" style="display:none" onchange="handlePdf(this)"/>
+        <div class="agent-btns">
+          <button class="abtn" onclick="runSingle('balance')" id="btn-balance" style="color:#4a9adf;border-color:#0a1e30">⚔ Sir Ledger — Balance Sheet</button>
+          <button class="abtn" onclick="runSingle('cashflow')" id="btn-cashflow" style="color:#2dd4a4;border-color:#0a2a1e">💧 Lady Flow — Cash Flow</button>
+          <button class="abtn" onclick="runSingle('proxy')" id="btn-proxy" style="color:#d4a432;border-color:#2a1e08">⚖ The Chancellor — Proxy Vote</button>
+          <button class="abtn" onclick="runSingle('risk')" id="btn-risk" style="color:#e85555;border-color:#2a0a0a">🔭 The Sentinel — Risk Scan</button>
+          <button class="abtn deploy-all" onclick="deployAll()" id="btn-deploy">⚔ DEPLOY ALL AGENTS</button>
+        </div>
+      </div>
+      <div class="wr-stats">
+        <div class="wst">ANALYSES RUN <b id="ws-count">0</b></div>
+        <div class="wst">ACTIVE <b id="ws-active">0 / 4</b></div>
+        <div class="wst">LAST TARGET <b id="ws-target">—</b></div>
+      </div>
+    </div>
+
+    <!-- CASH FLOW DUNGEON -->
+    <div class="room" id="room-cashflow" onclick="clickRoom('cashflow')" style="grid-column:3;grid-row:1">
+      <div class="rc tl"></div><div class="rc tr"></div><div class="rc bl"></div><div class="rc br"></div>
+      <div class="room-hdr">
+        <span class="ricon" style="color:#2dd4a4">💧</span>
+        <span class="rname">CASH FLOW DUNGEON</span>
+        <span class="rtag tag-idle" id="tag-cashflow">IDLE</span>
+      </div>
+      <div class="room-body">
+        <div class="agent-row">
+          <div class="pip" id="pip-cashflow" style="background:#0a2a1e"></div>
+          <div><div class="aname" style="color:#2dd4a4">Lady Flow</div><div class="atask" id="task-cashflow">Awaiting orders</div></div>
+        </div>
+        <div class="vizbox" id="viz-cashflow"><div class="scanline"></div></div>
+      </div>
+    </div>
+
+    <!-- PROXY CHAMBER -->
+    <div class="room" id="room-proxy" onclick="clickRoom('proxy')" style="grid-column:1;grid-row:2">
+      <div class="rc tl"></div><div class="rc tr"></div><div class="rc bl"></div><div class="rc br"></div>
+      <div class="room-hdr">
+        <span class="ricon" style="color:#d4a432">⚖</span>
+        <span class="rname">PROXY CHAMBER</span>
+        <span class="rtag tag-idle" id="tag-proxy">IDLE</span>
+      </div>
+      <div class="room-body">
+        <div class="agent-row">
+          <div class="pip" id="pip-proxy" style="background:#2a1e08"></div>
+          <div><div class="aname" style="color:#d4a432">The Chancellor</div><div class="atask" id="task-proxy">Awaiting orders</div></div>
+        </div>
+        <div class="vizbox" id="viz-proxy"><div class="scanline"></div></div>
+      </div>
+    </div>
+
+    <!-- WATCH TOWER -->
+    <div class="room" id="room-risk" onclick="clickRoom('risk')" style="grid-column:3;grid-row:2">
+      <div class="rc tl"></div><div class="rc tr"></div><div class="rc bl"></div><div class="rc br"></div>
+      <div class="room-hdr">
+        <span class="ricon" style="color:#e85555">🔭</span>
+        <span class="rname">WATCH TOWER</span>
+        <span class="rtag tag-idle" id="tag-risk">IDLE</span>
+      </div>
+      <div class="room-body">
+        <div class="agent-row">
+          <div class="pip" id="pip-risk" style="background:#2a0a0a"></div>
+          <div><div class="aname" style="color:#e85555">The Sentinel</div><div class="atask" id="task-risk">Awaiting orders</div></div>
+        </div>
+        <div class="vizbox" id="viz-risk"><div class="scanline"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /factory -->
+
+  <!-- RIGHT SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-hdr">
+      <span class="sb-title">ACTIVITY LOG</span>
+      <div class="live-dot"></div>
+    </div>
+    <div class="sb-tabs">
+      <div class="stab on" onclick="filterLog('all',this)">ALL</div>
+      <div class="stab" onclick="filterLog('done',this)">✓ DONE</div>
+      <div class="stab" onclick="filterLog('alert',this)">⚠ FLAGS</div>
+      <div class="stab" onclick="filterLog('stream',this)">STREAM</div>
+    </div>
+    <div id="logarea"></div>
+    <div id="rptpane">
+      <div class="rpt-hdr">
+        <span id="rpt-icon" style="font-size:13px">⚔</span>
+        <span class="rpt-aname" id="rpt-name">—</span>
+        <div class="rpt-tabs" id="rpt-tabs"></div>
+      </div>
+      <div class="rpt-body" id="rpt-body"></div>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+const AG = {
+  balance:  {name:"Sir Ledger",    icon:"⚔",  color:"#4a9adf"},
+  cashflow: {name:"Lady Flow",      icon:"💧", color:"#2dd4a4"},
+  proxy:    {name:"The Chancellor", icon:"⚖",  color:"#d4a432"},
+  risk:     {name:"The Sentinel",   icon:"🔭", color:"#e85555"},
+};
+
+const PROMPTS = {
+  balance:`You are a sharp balance sheet analyst for wealth advisor Michael. Zero fluff, no disclaimers.
+Deliver:
+1. SNAPSHOT — Key assets, liabilities, equity. Current ratio, quick ratio, D/E ratio.
+2. STRENGTH FLAGS — What's working. Be specific.
+3. RED FLAGS — What's concerning. Be blunt.
+4. TREND SIGNAL — Strengthening or deteriorating? One sentence.
+5. VERDICT — One actionable sentence for a wealth advisor.
+Under 350 words.`,
+
+  cashflow:`You are a cash flow analyst for wealth advisor Michael.
+Deliver:
+1. FCF SNAPSHOT — Operating CF, CapEx, free cash flow. FCF margin.
+2. QUALITY CHECK — FCF vs net income. Burning or generating?
+3. CAPITAL ALLOCATION — Dividends, buybacks, debt paydown, M&A.
+4. SUSTAINABILITY — Red flags or green lights.
+5. VERDICT — One actionable sentence for a wealth advisor.
+Under 350 words.`,
+
+  proxy:`You are a proxy vote advisor for wealth advisor Michael.
+Deliver:
+1. THE ITEM — Plain English summary of what's being voted on.
+2. SHAREHOLDER IMPACT — Shareholders or management benefit?
+3. GOVERNANCE ANGLE — Pay, classified boards, poison pills, dilution.
+4. RECOMMENDATION — FOR/AGAINST on clear items. Balanced pros/cons on complex ones. State which type.
+5. PRECEDENT — ISS/Glass Lewis typical stance.
+Under 350 words.`,
+
+  risk:`You are a rapid risk scanner for wealth advisor Michael.
+Rate each:
+- Liquidity risk
+- Leverage / debt maturity risk
+- Earnings quality (FCF vs net income gap)
+- Revenue concentration
+- Governance red flags
+Format: [HIGH/MEDIUM/LOW] — item — one-line explanation.
+If clean: state NO SIGNIFICANT FLAGS clearly.
+Under 200 words.`
+};
+
+let pdfData=null, pdfName=null, results={}, statuses={}, logFilter='all', allLogs=[], analyses=0, vizIvs={};
+
+// Clock
+setInterval(()=>{ document.getElementById('tb-clock').textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); },1000);
+
+// Connection lines
+function drawConns(){
+  const svg=document.getElementById('connsvg');
+  const fac=document.getElementById('factory');
+  const wr=document.getElementById('warroom');
+  const fr=fac.getBoundingClientRect(), wrr=wr.getBoundingClientRect();
+  const cx=wrr.left-fr.left+wrr.width/2, cy=wrr.top-fr.top+wrr.height/2;
+  let lines='';
+  ['balance','cashflow','proxy','risk'].forEach(id=>{
+    const r=document.getElementById('room-'+id);
+    if(!r) return;
+    const rr=r.getBoundingClientRect();
+    const rx=rr.left-fr.left+rr.width/2, ry=rr.top-fr.top+rr.height/2;
+    const st=statuses[id]||'idle';
+    const col=st==='working'?AG[id].color+'99':'#00ff8818';
+    const w=st==='working'?2:1;
+    lines+=`<line x1="${cx}" y1="${cy}" x2="${rx}" y2="${ry}" stroke="${col}" stroke-width="${w}" stroke-dasharray="5 5"><animate attributeName="stroke-dashoffset" from="0" to="-20" dur="0.8s" repeatCount="indefinite"/></line>`;
+  });
+  svg.innerHTML=lines;
+}
+setInterval(drawConns,600); setTimeout(drawConns,400);
+
+function ts(){ return new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}); }
+
+function addLog(type,icon,text){
+  const e={time:ts(),type,icon,text}; allLogs.push(e); renderLE(e);
+}
+function renderLE(e){
+  if(logFilter!=='all'&&e.type!==logFilter) return;
+  const a=document.getElementById('logarea');
+  const d=document.createElement('div'); d.className='lentry'; d.dataset.type=e.type;
+  d.innerHTML=`<span class="ltime">${e.time}</span><span class="licon">${e.icon}</span><span class="ltxt ${e.type}">${e.text}</span>`;
+  a.appendChild(d); a.scrollTop=a.scrollHeight;
+}
+function filterLog(type,el){
+  logFilter=type;
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+  const a=document.getElementById('logarea'); a.innerHTML='';
+  allLogs.forEach(e=>{ if(type==='all'||e.type===type) renderLE(e); });
+}
+
+function handlePdf(inp){
+  const f=inp.files[0]; if(!f) return;
+  pdfName=f.name; document.getElementById('pdflbl').textContent=f.name.slice(0,16)+(f.name.length>16?'…':'');
+  const r=new FileReader();
+  r.onload=e=>{ pdfData=e.target.result.split(',')[1]; addLog('done','📎',`${f.name} ready`); };
+  r.readAsDataURL(f);
+}
+
+const IDLE_POS={balance:{l:'14%',t:'20%'},cashflow:{l:'66%',t:'20%'},proxy:{l:'14%',t:'68%'},risk:{l:'66%',t:'68%'}};
+const WORK_POS={balance:{l:'20%',t:'26%'},cashflow:{l:'60%',t:'26%'},proxy:{l:'20%',t:'62%'},risk:{l:'60%',t:'62%'}};
+
+function setStatus(id,st){
+  statuses[id]=st;
+  const ag=AG[id];
+  const room=document.getElementById('room-'+id);
+  const tag=document.getElementById('tag-'+id);
+  const pip=document.getElementById('pip-'+id);
+  const task=document.getElementById('task-'+id);
+  const sp=document.getElementById('sp-'+id);
+
+  room.className='room '+(st==='working'?'working':st==='done'?'done':st==='error'?'alertst':'');
+  if(st==='working'){
+    tag.className='rtag tag-work'; tag.textContent='ANALYZING';
+    pip.style.cssText=`background:${ag.color};box-shadow:0 0 7px ${ag.color}`;
+    task.textContent='Analyzing…'; task.className='atask on';
+    sp.style.boxShadow=`0 0 14px ${ag.color}`; sp.classList.add('working');
+    sp.style.left=WORK_POS[id].l; sp.style.top=WORK_POS[id].t;
+    startViz(id);
+  } else if(st==='done'){
+    tag.className='rtag tag-done'; tag.textContent='COMPLETE';
+    pip.style.cssText='background:#00ccff;box-shadow:0 0 6px #00ccff';
+    task.textContent='Report ready'; task.className='atask on';
+    sp.classList.remove('working'); sp.style.boxShadow='0 0 6px #00ccff44';
+    sp.style.left=IDLE_POS[id].l; sp.style.top=IDLE_POS[id].t;
+    stopViz(id);
+  } else {
+    tag.className='rtag tag-idle'; tag.textContent='IDLE';
+    pip.style.cssText=''; task.textContent='Awaiting orders'; task.className='atask';
+    sp.classList.remove('working'); sp.style.boxShadow='none';
+    sp.style.left=IDLE_POS[id].l; sp.style.top=IDLE_POS[id].t;
+    stopViz(id);
+  }
+  // update counts
+  const active=Object.values(statuses).filter(s=>s==='working').length;
+  document.getElementById('ws-active').textContent=active+' / 4';
+  document.getElementById('tb-agents').textContent=active>0?active+' ACTIVE':'4 ONLINE';
+  document.getElementById('tb-status').textContent=active>0?'MOBILIZED':'STANDBY';
+  const orb=document.getElementById('orb');
+  orb.style.boxShadow=active>0?'0 0 18px #00ff88,0 0 36px #00ff8877':'0 0 10px #00ff88,0 0 20px #00ff8844';
+}
+
+function startViz(id){
+  const v=document.getElementById('viz-'+id); if(vizIvs[id]) return;
+  vizIvs[id]=setInterval(()=>{
+    v.querySelectorAll('.vbar').forEach(b=>b.remove());
+    for(let i=0;i<14;i++){
+      const b=document.createElement('div'); b.className='vbar';
+      b.style.cssText=`left:${i*7+3}px;height:${Math.random()*26+4}px;background:linear-gradient(to top,${AG[id].color},${AG[id].color}44)`;
+      v.appendChild(b);
+    }
+  },350);
+}
+function stopViz(id){ if(vizIvs[id]){clearInterval(vizIvs[id]);delete vizIvs[id];} }
+
+function showReport(id){
+  const pane=document.getElementById('rptpane');
+  const body=document.getElementById('rpt-body');
+  const text=results[id];
+  if(!text){pane.classList.remove('show');return;}
+  document.getElementById('rpt-icon').textContent=AG[id].icon;
+  const nm=document.getElementById('rpt-name'); nm.textContent=AG[id].name; nm.style.color=AG[id].color;
+  body.textContent=text==='loading'?'Gathering intelligence…':text;
+  pane.classList.add('show');
+  const tabs=document.getElementById('rpt-tabs'); tabs.innerHTML='';
+  Object.keys(results).forEach(aid=>{
+    const btn=document.createElement('button'); btn.className='rtab'+(aid===id?' on':'');
+    btn.textContent=AG[aid].icon; btn.onclick=e=>{e.stopPropagation();showReport(aid);};
+    tabs.appendChild(btn);
+  });
+}
+
+async function runAgent(id){
+  const q=document.getElementById('cmd').value.trim();
+  if(!q&&!pdfData) return;
+  setStatus(id,'working'); results[id]='loading'; showReport(id);
+  addLog('warn',AG[id].icon,`${AG[id].name} deployed — ${pdfData?pdfName:q}`);
+
+  const msgs=pdfData
+    ?[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:pdfData}},{type:"text",text:q?`Analyze. Context: ${q}`:"Analyze this financial document."}]}]
+    :[{role:"user",content:`Analyze: ${q}`}];
+
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,stream:true,system:PROMPTS[id],messages:msgs})
+    });
+    if(!res.ok) throw new Error(`API ${res.status}`);
+    const reader=res.body.getReader(), dec=new TextDecoder();
+    let buf='',out='';
+    while(true){
+      const {done,value}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n'); buf=lines.pop();
+      for(const line of lines){
+        if(!line.startsWith('data: ')) continue;
+        const d=line.slice(6).trim(); if(d==='[DONE]') break;
+        try{
+          const p=JSON.parse(d);
+          if(p.type==='content_block_delta'&&p.delta?.text){
+            out+=p.delta.text; results[id]=out;
+            if(document.getElementById('rpt-name').textContent===AG[id].name){
+              document.getElementById('rpt-body').textContent=out;
+            }
+          }
+        }catch{}
+      }
+    }
+    setStatus(id,'done'); analyses++;
+    document.getElementById('tb-count').textContent=analyses;
+    document.getElementById('ws-count').textContent=analyses;
+    document.getElementById('ws-target').textContent=(document.getElementById('cmd').value.trim()||pdfName||'?').toUpperCase().slice(0,8);
+    addLog('done','✓',`${AG[id].name} — dispatch complete`);
+    showReport(id);
+  }catch(err){
+    setStatus(id,'error'); results[id]=`Error: ${err.message}`;
+    addLog('alert','✗',`${AG[id].name}: ${err.message}`); showReport(id);
+  }
+}
+
+async function deployAll(){
+  const q=document.getElementById('cmd').value.trim();
+  if(!q&&!pdfData) return;
+  addLog('warn','⚔','All agents mobilized — '+(q||pdfName));
+  for(const id of ['balance','cashflow','proxy','risk']){ await runAgent(id); await new Promise(r=>setTimeout(r,200)); }
+  addLog('done','🏰','Castle sweep complete');
+}
+
+function runSingle(id){ const q=document.getElementById('cmd').value.trim(); if(q||pdfData) runAgent(id); }
+
+function clickRoom(id){
+  if(results[id]&&results[id]!=='loading'){ showReport(id); return; }
+  runSingle(id);
+}
+
+function clearAll(){
+  results={}; statuses={};
+  ['balance','cashflow','proxy','risk'].forEach(id=>setStatus(id,'idle'));
+  document.getElementById('logarea').innerHTML='';
+  document.getElementById('rptpane').classList.remove('show');
+  allLogs=[]; pdfData=null; pdfName=null;
+  document.getElementById('pdflbl').textContent='Upload PDF Statement';
+  document.getElementById('pdfinput').value='';
+  document.getElementById('ws-count').textContent='0';
+  document.getElementById('ws-target').textContent='—';
+  document.getElementById('tb-count').textContent='0';
+}
+
+// init
+addLog('info','🏰',"The Analyst's Keep is online");
+addLog('info','›','Type a ticker in the War Room and hit ENTER');
+drawConns();
+</script>
+</body>
+</html>
